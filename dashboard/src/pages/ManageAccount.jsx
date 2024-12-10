@@ -1,92 +1,83 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import './ManageAccount.css';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 import { IconButton, Modal, Box, TextField, Button, Select, MenuItem, InputLabel, FormControl } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import Register from './Register';
- 
+
 function ManageAccount() {
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState([]); // Users will be fetched from localStorage
   const [selectedUser, setSelectedUser] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const navigate = useNavigate();
- 
+
   useEffect(() => {
-    fetchUsers();
+    // Fetch users from localStorage and convert to an array
+    const storedUsers = JSON.parse(localStorage.getItem('users'));
+    if (storedUsers && typeof storedUsers === 'object') {
+      const usersArray = Object.keys(storedUsers).map(key => ({
+        _id: key,
+        username: key,
+        ...storedUsers[key],
+      }));
+      setUsers(usersArray);
+    } else {
+      setUsers([]); // Set to empty array if no valid data
+    }
   }, []);
- 
-  const fetchUsers = async () => {
-    try {
-      const response = await axios.get('http://localhost:3004/api/users');
-      setUsers(response.data);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-    }
+
+  const saveUsersToLocalStorage = (updatedUsers) => {
+    localStorage.setItem('users', JSON.stringify(updatedUsers));
   };
- 
-  const deleteUser = async (userId) => {
-    try {
-      await axios.delete(`http://localhost:3004/api/users/${userId}`);
-      console.log('after deletion should show this log to indicate that the deletion was successful');
-      navigate('/ManageAccount');
-      alert('User deleted successfully');
-      setUsers(users.filter(user => user._id !== userId)); // Remove the deleted user from the state
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      alert('Error deleting user');
-    }
+
+  const deleteUser = (userId) => {
+    const updatedUsers = users.filter(user => user._id !== userId);
+    setUsers(updatedUsers);
+    saveUsersToLocalStorage(updatedUsers);
+    alert('User deleted successfully');
   };
- 
+
   const handleEditClick = (user) => {
     setSelectedUser(user);
     setIsEditModalOpen(true);
   };
- 
+
   const handleEditModalClose = () => {
     setIsEditModalOpen(false);
     setSelectedUser(null);
   };
- 
-  const handleEditUser = async () => {
-    try {
-      console.log('Selected user before update:', selectedUser);
-      const response = await axios.put(`http://localhost:3004/edituser/${selectedUser._id}`, selectedUser);
-      console.log('Update response:', response);
-      setUsers(users.map(user => (user._id === selectedUser._id ? selectedUser : user))); // Update the user in the state
-      handleEditModalClose();
-      alert('User updated successfully');
-    } catch (error) {
-      console.error('Error updating user:', error);
-      alert('Error updating user');
-    }
+
+  const handleEditUser = () => {
+    const updatedUsers = users.map(user => (user._id === selectedUser._id ? selectedUser : user));
+    setUsers(updatedUsers);
+    saveUsersToLocalStorage(updatedUsers);
+    handleEditModalClose();
+    alert('User updated successfully');
   };
- 
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setSelectedUser({ ...selectedUser, [name]: value });
   };
- 
+
   const handleRoleChange = (e) => {
     setSelectedUser({ ...selectedUser, userRole: e.target.value });
   };
- 
+
   const handleRegisterModalOpen = () => {
     setIsRegisterModalOpen(true);
   };
- 
+
   const handleRegisterModalClose = () => {
     setIsRegisterModalOpen(false);
   };
- 
+
   const filteredUsers = users.filter(user =>
     user.username.toLowerCase().includes(searchQuery.toLowerCase())
   );
- 
+
   return (
     <div className="manage-account-container">
       <div className="sidebar">
@@ -102,13 +93,13 @@ function ManageAccount() {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="search-field"
           />
-          <br/>
-          <br/>
+          <br />
+          <br />
           <Button variant="contained" color="primary" onClick={handleRegisterModalOpen}>
             Add User
           </Button>
         </div>
-        <br/>
+        <br />
         <table className="user-table">
           <thead>
             <tr>
@@ -137,7 +128,7 @@ function ManageAccount() {
           </tbody>
         </table>
       </div>
- 
+
       <Modal open={isEditModalOpen} onClose={handleEditModalClose}>
         <Box sx={{ ...modalStyle }}>
           <h2>Edit User</h2>
@@ -178,7 +169,7 @@ function ManageAccount() {
           </Button>
         </Box>
       </Modal>
- 
+
       <Modal open={isRegisterModalOpen} onClose={handleRegisterModalClose}>
         <Box sx={{ ...modalStyle }}>
           <Register closeModal={handleRegisterModalClose} />
@@ -187,7 +178,7 @@ function ManageAccount() {
     </div>
   );
 }
- 
+
 const modalStyle = {
   position: 'absolute',
   top: '50%',
@@ -198,5 +189,5 @@ const modalStyle = {
   boxShadow: 24,
   p: 4,
 };
- 
+
 export default ManageAccount;

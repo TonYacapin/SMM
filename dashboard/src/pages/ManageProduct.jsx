@@ -14,7 +14,6 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import AccountBoxIcon from '@mui/icons-material/AccountBox';
 import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 
-import axios from 'axios';
 import './ManageProduct.css';
 
 const ManageProduct = () => {
@@ -38,11 +37,12 @@ const ManageProduct = () => {
     const [selectedCategory, setSelectedCategory] = useState('All');
 
     useEffect(() => {
-        fetchMenu();
+        fetchProducts();
     }, []);
 
-    // const categories = ['All', 'Books', 'Arts & Crafts', 'Coloring Supplies', 'Filling Supplies', 'Paper Supplies', 'Writing Supplies', 'School & Office Essentials'];
+    // Example categories
     const categories = ['All', 'Anime', 'Action', 'Horror'];
+
     const handleCategoryChange = (category) => {
         setSelectedCategory(category);
     };
@@ -59,11 +59,11 @@ const ManageProduct = () => {
 
     const handleOpenEditModal = (product) => {
         setSelectedProduct({
-            _id: product?._id,
-            productName: product?.name,
-            productDescription: product?.description,
-            productCategory: product?.category,
-            image: product?.image
+            _id: product._id,
+            productName: product.name,
+            productDescription: product.description,
+            productCategory: product.category,
+            image: product.image // Now this will be a base64 string
         });
         setModalEditOpen(true);
     };
@@ -83,13 +83,18 @@ const ManageProduct = () => {
         const { name, value, files } = e.target;
         if (name === 'productImage' && files && files[0]) {
             const file = files[0];
-            const imageUrl = URL.createObjectURL(file);
-
-            setProducts((prev) => ({
-                ...prev,
-                productImage: file,
-                productImageUrl: imageUrl
-            }));
+            const reader = new FileReader();
+            
+            reader.onloadend = () => {
+                // reader.result will be a base64 encoded string
+                setProducts((prev) => ({
+                    ...prev,
+                    productImage: reader.result, // Store base64 string
+                    productImageUrl: reader.result // Use same base64 string for preview
+                }));
+            };
+            
+            reader.readAsDataURL(file);
         } else {
             setProducts((prev) => ({
                 ...prev,
@@ -109,49 +114,43 @@ const ManageProduct = () => {
         });
     };
 
-    const handleAddProduct = async () => {
-        try {
-            const { productName, productDescription, productImage, productCategory } = products;
-
-            if (!productName || !productDescription || !productImage || !productCategory) {
-                return alert('Fields must not be empty!');
-            }
-
-            const formData = new FormData();
-            formData.append('productName', productName);
-            formData.append('productDescription', productDescription);
-            formData.append('image', productImage);
-            formData.append('category', productCategory);
-
-            await axios.post('http://localhost:3004/addproduct', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
-            });
-
-            setProducts({
-                productName: '',
-                productDescription: '',
-                productImageUrl: '',
-                productImage: null,
-                productCategory: ''
-            });
-            fetchMenu();
-        } catch (error) {
-            alert('Error adding product!', error);
-        } finally {
-            setModalAddOpen(false);
+    const handleAddProduct = () => {
+        const { productName, productDescription, productImage, productCategory } = products;
+    
+        if (!productName || !productDescription || !productImage || !productCategory) {
+            return alert('Fields must not be empty!');
         }
+    
+        const newProduct = {
+            _id: new Date().getTime(),
+            name: productName,
+            description: productDescription,
+            image: productImage, // Now this is a base64 string
+            category: productCategory,
+        };
+    
+        const existingProducts = JSON.parse(localStorage.getItem('products')) || [];
+        existingProducts.push(newProduct);
+        localStorage.setItem('products', JSON.stringify(existingProducts));
+    
+        // Reset form
+        setProducts({
+            productName: '',
+            productDescription: '',
+            productImageUrl: '',
+            productImage: null,
+            productCategory: ''
+        });
+    
+        fetchProducts();
+        setModalAddOpen(false);
     };
 
-    const handleDeleteProduct = async () => {
-        try {
-            await axios.post('http://localhost:3004/deleteproduct', { productId: selectedProduct._id });
-            setValues((prev) => prev.filter((product) => product._id !== selectedProduct._id));
-            handleCloseEditModal();
-        } catch (error) {
-            alert('Error deleting product!', error);
-        }
+    const handleDeleteProduct = () => {
+        const updatedProducts = values.filter(product => product._id !== selectedProduct._id);
+        localStorage.setItem('products', JSON.stringify(updatedProducts));
+        setValues(updatedProducts);
+        handleCloseEditModal();
     };
 
     const handleEditChange = (e) => {
@@ -162,42 +161,32 @@ const ManageProduct = () => {
         }));
     };
 
-    const handleUpdateProduct = async () => {
-        try {
-            const { _id, productName, productDescription, productCategory } = selectedProduct;
+    const handleUpdateProduct = () => {
+        const { _id, productName, productDescription, productCategory } = selectedProduct;
 
-            if (!_id || !productName || !productDescription || !productCategory) {
-                return alert('Fields must not be empty!');
-            }
-
-            const data = {
-                productId: _id,
-                productName,
-                productDescription,
-                category: productCategory
-            };
-
-            const response = await axios.post('http://localhost:3004/editproduct', data, {
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (response.data.success) {
-                handleCloseEditModal();
-                fetchMenu();
-            } else {
-                alert(response.data.message);
-            }
-        } catch (error) {
-            console.error('Error updating product:', error);
-            alert('Error updating product!');
+        if (!_id || !productName || !productDescription || !productCategory) {
+            return alert('Fields must not be empty!');
         }
+
+        const updatedProduct = {
+            _id,
+            name: productName,
+            description: productDescription,
+            category: productCategory,
+        };
+
+        const updatedProducts = values.map(product =>
+            product._id === _id ? updatedProduct : product
+        );
+
+        localStorage.setItem('products', JSON.stringify(updatedProducts));
+        setValues(updatedProducts);
+        handleCloseEditModal();
     };
 
-    const fetchMenu = async () => {
-        const menu = await axios.get('http://localhost:3004/getallproducts');
-        setValues(menu?.data?.data);
+    const fetchProducts = () => {
+        const storedProducts = JSON.parse(localStorage.getItem('products')) || [];
+        setValues(storedProducts);
     };
 
     return (
@@ -212,10 +201,6 @@ const ManageProduct = () => {
                     <AccountBoxIcon sx={{ marginRight: '10px' }} />
                     Manage Account
                 </Link>
-                {/* <Link to="/BackupandRestore" className="sidebar-link sidebar-link">
-                    <ExitToAppIcon sx={{ marginRight: '10px' }} />
-                    Backup and Restore
-                </Link> */}
                 <Link to="/" className="sidebar-link logout-link">
                     <ExitToAppIcon sx={{ marginRight: '10px' }} />
                     Logout
@@ -301,7 +286,7 @@ const ManageProduct = () => {
                         <div className="modal-forms">
                             <div className="image-container">
                                 {selectedProduct.image ? (
-                                    <img src={`http://localhost:3004/uploads/${selectedProduct.image}`} alt="Product" />
+                                    <img src={selectedProduct.image} alt="Product" />
                                 ) : (
                                     <h1>No image</h1>
                                 )}
@@ -345,7 +330,7 @@ const ManageProduct = () => {
                 {filteredValues?.map((pro) => (
                     <div key={pro?._id} className="card-edit" onClick={() => handleOpenEditModal(pro)}>
                         <div className="image-container">
-                            <img src={`http://localhost:3004/uploads/${pro?.image}`} alt='' />
+                            <img src={pro?.image} alt='' />
                         </div>
                         <div className='label'>
                             <h3>{pro?.name}</h3>
