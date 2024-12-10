@@ -8,5 +8,5 @@ export default defineConfig({
     host: 'localhost',
     port: 3000,  // Make sure it's a number
   },
-  base: '/', // Set this to '/' if deploying to the root on Vercel
+  base: '/SIA2FinalProject-2', // Set this to '/' if deploying to the root on Vercel
 });
