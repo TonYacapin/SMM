@@ -1,0 +1,40 @@
+.background-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: url('/registerBg.jpg') no-repeat center center fixed;
+  background-size: cover;
+}
+
+.form-container {
+  width: 100%;
+  max-width: 400px;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background-color: #fff;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.button-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.message-container {
+  margin-top: 20px;
+  text-align: center;
+  color: #0c1c8d;
+  font-weight: bold;
+}
+
+input:focus {
+  outline: none;
+  border-color: #0c1c8d;
+}
